@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-and-push-docker:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     # Only push for main, cloud, release branches (not feature)
     if: |
       github.ref == 'refs/heads/main' ||
@@ -41,7 +41,7 @@ jobs:
 
   # For feature branches, just build (no push)
   build-docker-feature:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: startsWith(github.ref, 'refs/heads/feature/')
     steps:
       - name: Checkout code
