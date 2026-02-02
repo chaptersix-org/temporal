@@ -31,7 +31,7 @@ permissions:
 jobs:
   create-tag:
     name: "Create a tag"
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     defaults:
       run:
@@ -175,7 +175,7 @@ jobs:
 
   update-deps:
     name: "Update dependencies in main branch"
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [create-tag]
     if: ${{ github.event.inputs.update_deps == 'true' }}
 

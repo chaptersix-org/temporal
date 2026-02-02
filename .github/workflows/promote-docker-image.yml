@@ -27,7 +27,7 @@ on:
 
 jobs:
   validate-inputs:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       source-tag-safe: ${{ steps.validate.outputs.source-tag }}
       target-tags-safe: ${{ steps.validate.outputs.target-tags }}
@@ -84,7 +84,7 @@ jobs:
 
   scan-image:
     needs: validate-inputs
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       scan-result: ${{ steps.scan.outputs.scan-result }}
       critical-count: ${{ steps.scan.outputs.critical-count }}
@@ -118,7 +118,7 @@ jobs:
 
   check-security-gate:
     needs: [scan-image]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       can-promote: ${{ steps.check.outputs.can-promote }}
     steps:
@@ -169,7 +169,7 @@ jobs:
   promote:
     needs: [validate-inputs, check-security-gate]
     if: needs.check-security-gate.outputs.can-promote == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
