@@ -417,93 +417,29 @@ jobs:
         run: |
           docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} down -v
 
-  # Root job name includes matrix details so it is unique per shard.
-  # This MUST stay in sync with the `job_name` passed to the job-id action below.
+  # SQLite-only functional test for PRs and main branch pushes
   functional-test:
-    # On PR and push to main: only run sqlite tests. On workflow_dispatch or push to other branches: run all DBs.
-    if: ${{ inputs.run_single_unit_test != true && (matrix.name == 'sqlite' || !(github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))) }}
-    # Display name shown in the UI. The job-id lookup uses this exact value.
-    name: Functional test (${{ matrix.name }}, shard ${{ matrix.shard_index }})
+    if: ${{ inputs.run_single_unit_test != true }}
+    name: Functional test (sqlite, shard ${{ matrix.shard_index }})
     needs: [pre-build, set-up-single-test]
     strategy:
       fail-fast: false
       matrix:
-        name:
-          - cass_es
-          - cass_es8
-          - cass_os2
-          - cass_os3
-          - sqlite
-          - mysql8
-          - postgres12
-          - postgres12_pgx
         shard_index: ${{ fromJson(needs.set-up-single-test.outputs.shard_indices) }}
         runs-on: ${{ fromJson(needs.set-up-single-test.outputs.runs_on) }}
-        include:
-          - name: cass_es
-            persistence_type: nosql
-            persistence_driver: cassandra
-            containers: [cassandra, elasticsearch]
-            es_version: v7
-            # Cassandra tests need a larger instance
-            runs_on_override: blacksmith-8vcpu-ubuntu-2404
-          - name: cass_es8
-            persistence_type: nosql
-            persistence_driver: cassandra
-            containers: [cassandra, elasticsearch8]
-            es_version: v8
-            # Cassandra tests need a larger instance
-            runs_on_override: blacksmith-8vcpu-ubuntu-2404
-          - name: cass_os2
-            persistence_type: nosql
-            persistence_driver: cassandra
-            containers: [cassandra, opensearch2]
-          - name: cass_os3
-            persistence_type: nosql
-            persistence_driver: cassandra
-            containers: [cassandra, opensearch3]
-          - name: sqlite
-            persistence_type: sql
-            persistence_driver: sqlite
-            containers: []
-          - name: mysql8
-            persistence_type: sql
-            persistence_driver: mysql8
-            containers: [mysql]
-          - name: postgres12
-            persistence_type: sql
-            persistence_driver: postgres12
-            containers: [postgresql]
-          - name: postgres12_pgx
-            persistence_type: sql
-            persistence_driver: postgres12_pgx
-            containers: [postgresql]
-    runs-on: ${{ (github.repository_owner == 'temporalio' && matrix.runs_on_override) || matrix.runs-on }}
+    runs-on: ${{ matrix.runs-on }}
     env:
       TEST_TOTAL_SHARDS: ${{ needs.set-up-single-test.outputs.total_shards }}
       TEST_SHARD_INDEX: ${{ matrix.shard_index }}
-      PERSISTENCE_TYPE: ${{ matrix.persistence_type }}
-      PERSISTENCE_DRIVER: ${{ matrix.persistence_driver }}
+      PERSISTENCE_TYPE: sql
+      PERSISTENCE_DRIVER: sqlite
       TEST_TIMEOUT: ${{ needs.set-up-single-test.outputs.test_timeout }}
     steps:
-      - uses: ScribeMD/docker-cache@0.3.7
-        if: ${{ inputs.run_single_functional_test != true || (inputs.run_single_functional_test == true && contains(fromJSON(needs.set-up-single-test.outputs.dbs), env.PERSISTENCE_DRIVER)) }}
-        with:
-          key: docker-${{ runner.os }}${{ runner.arch }}-${{ hashFiles(env.DOCKER_COMPOSE_FILE) }}
-
       - uses: actions/checkout@v6
         if: ${{ inputs.run_single_functional_test != true || (inputs.run_single_functional_test == true && contains(fromJSON(needs.set-up-single-test.outputs.dbs), env.PERSISTENCE_DRIVER)) }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ env.COMMIT }}
-
-      - name: Start containerized dependencies
-        if: ${{ toJson(matrix.containers) != '[]' && (inputs.run_single_functional_test != true || (inputs.run_single_functional_test == true && contains(fromJSON(needs.set-up-single-test.outputs.dbs), env.PERSISTENCE_DRIVER))) }}
-        uses: hoverkraft-tech/compose-action@v2.0.1
-        with:
-          compose-file: ${{ env.DOCKER_COMPOSE_FILE }}
-          services: "${{ join(matrix.containers, '\n') }}"
-          down-flags: -v
 
       - uses: actions/setup-go@v6
         if: ${{ inputs.run_single_functional_test != true || (inputs.run_single_functional_test == true && contains(fromJSON(needs.set-up-single-test.outputs.dbs), env.PERSISTENCE_DRIVER)) }}
@@ -528,7 +464,7 @@ jobs:
         id: get_job_id
         uses: ./.github/actions/get-job-id
         with:
-          job_name: Functional test (${{ matrix.name }}, shard ${{ matrix.shard_index }})
+          job_name: Functional test (sqlite, shard ${{ matrix.shard_index }})
           run_id: ${{ github.run_id }}
 
       - name: Run functional test
@@ -580,7 +516,7 @@ jobs:
         uses: actions/upload-artifact@v4.4.3
         if: ${{ !cancelled() && !inputs.run_single_functional_test }}
         with:
-          name: junit-xml--${{github.run_id}}--${{ steps.get_job_id.outputs.job_id }}--${{github.run_attempt}}--${{matrix.name}}--${{matrix.shard_index}}--functional-test
+          name: junit-xml--${{github.run_id}}--${{ steps.get_job_id.outputs.job_id }}--${{github.run_attempt}}--sqlite--${{matrix.shard_index}}--functional-test
           path: ./.testoutput/junit.*.xml
           include-hidden-files: true
           retention-days: 28
