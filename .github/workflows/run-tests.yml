@@ -38,14 +38,8 @@ jobs:
       - name: Configure runners
         id: configure_runners
         run: |
-          # Use 8-core runners for temporalio org, standard runners for forks
-          if [[ "${{ github.repository_owner }}" == "temporalio" ]]; then
-            runner_x64="ubuntu-latest-8-cores"
-            runner_arm="ubuntu-24.04-arm64-8-cores"
-          else
-            runner_x64="ubuntu-latest"
-            runner_arm="ubuntu-24.04-arm"
-          fi
+          runner_x64="blacksmith-8vcpu-ubuntu-2404"
+          runner_arm="blacksmith-8vcpu-ubuntu-2404"
 
           {
             echo "runner_x64=$runner_x64"
@@ -106,7 +100,7 @@ jobs:
         run: |
           MATRIX=$(
             jq -c --argjson shard_count "$SHARD_COUNT" '
-              # Cross-product of every db config × every job type
+              # Cross-product of every db config x every job type
               input as $jobs |
               [ to_entries[] as $db | $jobs | to_entries[] as $job |
 
